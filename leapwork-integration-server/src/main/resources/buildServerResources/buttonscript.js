@@ -180,7 +180,11 @@ function buildControllerApiUrl(hostname, rawPort, enableHttps, relativePath) {
 function getControllerBaseUrl(hostname, rawPort, enableHttps) {
           const trimmedInput = normalizeUrlQuerySeparators((hostname || "").trim());
           const scheme = enableHttps ? "https" : "http";
-          const candidate = isAbsoluteUrl(trimmedInput) ? trimmedInput : scheme + "://" + trimmedInput;
+          const candidate = trimmedInput.startsWith("http://") || trimmedInput.startsWith("https://")
+              ? trimmedInput
+              : (trimmedInput.includes("/") || trimmedInput.includes("?")
+                  ? `${scheme}://${trimmedInput}`
+                  : `${scheme}://${trimmedInput}:${rawPort}`);
           const url = new URL(candidate);
 
           if (!url.port) {
@@ -192,15 +196,6 @@ function getControllerBaseUrl(hostname, rawPort, enableHttps) {
           }
 
           return url;
-}
-
-function isAbsoluteUrl(input) {
-          try {
-              const url = new URL(input);
-              return url.protocol === "http:" || url.protocol === "https:";
-          } catch (e) {
-              return false;
-          }
 }
 
 function normalizeUrlQuerySeparators(input) {

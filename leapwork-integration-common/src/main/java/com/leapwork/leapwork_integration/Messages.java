@@ -24,13 +24,13 @@ public final class Messages {
     
     public static final String CASE_STACKTRACE_FORMAT_BLOCKTITLE = "%1$s - %2$s -%3$s";
     
-    public static final String GET_ALL_AVAILABLE_SCHEDULES_PATH = "api/v4/schedules";
-    public static final String RUN_SCHEDULE_PATH = "api/v4/schedules/%1$s/runNow";
-    public static final String STOP_RUN_PATH = "api/v4/run/%1$s/stop";
-    public static final String GET_RUN_STATUS_PATH = "api/v4/run/%1$s/status";
-    public static final String GET_RUN_ITEMS_IDS_PATH = "api/v4/run/%1$s/runItemIds";
-    public static final String GET_RUN_ITEM_PATH = "api/v4/runItems/%1$s";
-    public static final String GET_RUN_ITEM_KEYFRAMES_PATH = "api/v4/runItems/%1$s/keyframes";
+    public static final String GET_ALL_AVAILABLE_SCHEDULES_URI = "api/v4/schedules";
+    public static final String RUN_SCHEDULE_URI = "api/v4/schedules/%1$s/runNow";
+    public static final String STOP_RUN_URI = "api/v4/run/%1$s/stop";
+    public static final String GET_RUN_STATUS_URI = "api/v4/run/%1$s/status";
+    public static final String GET_RUN_ITEMS_IDS_URI = "api/v4/run/%1$s/runItemIds";
+    public static final String GET_RUN_ITEM_URI = "api/v4/runItems/%1$s";
+    public static final String GET_RUN_ITEM_KEYFRAMES_URI = "api/v4/runItems/%1$s/keyframes";
     public static final String TEAMCITY_WORKSPACE_VARIABLE = "WORKSPACE: %1$s";
 
 

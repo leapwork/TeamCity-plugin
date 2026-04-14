@@ -127,7 +127,11 @@ public class LeapworkTeamCityBridgeRunType extends RunType {
 		try {
 			String hostname = parameters.get(StringConstants.ParameterName_Hostname);
 			String normalizedHostname = normalizeUrlQuerySeparators(hostname == null ? "" : hostname.trim());
-			String candidate = isAbsoluteUrl(normalizedHostname) ? normalizedHostname : scheme + "://" + normalizedHostname;
+			String candidate = normalizedHostname.startsWith("http://") || normalizedHostname.startsWith("https://")
+					? normalizedHostname
+					: (normalizedHostname.contains("/") || normalizedHostname.contains("?")
+							? scheme + "://" + normalizedHostname
+							: scheme + "://" + normalizedHostname + ":" + port);
 			URI parsedUri = new URI(candidate);
 			String resolvedPath = parsedUri.getPath() == null || parsedUri.getPath().trim().isEmpty() ? "/" : parsedUri.getPath();
 			int resolvedPort = parsedUri.getPort() == -1 ? port : parsedUri.getPort();
@@ -139,17 +143,6 @@ public class LeapworkTeamCityBridgeRunType extends RunType {
 		} catch (Exception e) {
 			return scheme + "://" + parameters.get(StringConstants.ParameterName_Hostname) + ":"
 					+ parameters.get(StringConstants.ParameterName_Port) + "/api/v4/schedules";
-		}
-	}
-
-	private boolean isAbsoluteUrl(String input) {
-		try {
-			URI uri = new URI(input);
-			String scheme = uri.getScheme();
-			return uri.isAbsolute() && uri.getHost() != null
-					&& ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme));
-		} catch (Exception e) {
-			return false;
 		}
 	}
 

@@ -142,31 +142,27 @@ public final class PluginHandler {
 		try {
 			String trimmedInput = normalizeUrlQuerySeparators(hostname == null ? STRING_EMPTY : hostname.trim());
 			String uriCandidate;
-			URI parsedUri;
 
-			if (isAbsoluteUri(trimmedInput))
-				parsedUri = new URI(trimmedInput);
-			else {
-				if (trimmedInput.contains("/") || trimmedInput.contains("?") || trimmedInput.contains(":"))
-					uriCandidate = scheme + "://" + trimmedInput;
-				else
-					uriCandidate = scheme + "://" + trimmedInput + ":" + port;
+			if (trimmedInput.startsWith("http://") || trimmedInput.startsWith("https://"))
+				uriCandidate = trimmedInput;
+			else if (trimmedInput.contains("/") || trimmedInput.contains("?"))
+				uriCandidate = String.format("%s://%s", scheme, trimmedInput);
+			else
+				uriCandidate = String.format("%s://%s:%d", scheme, trimmedInput, port);
 
-				parsedUri = new URI(uriCandidate);
-			}
+			URI parsedUri = new URI(uriCandidate);
 
 			if (parsedUri.getHost() == null)
 				throw new IllegalArgumentException("Invalid controller URL");
 
-			int resolvedPort = parsedUri.getPort() == -1 ? port : parsedUri.getPort();
-			URI controllerApiHttpAddress = new URI(parsedUri.getScheme(), null, parsedUri.getHost(), resolvedPort,
-					ensureRootPath(parsedUri.getPath()), parsedUri.getQuery(), null);
-			logger.warning(controllerApiHttpAddress.toString());
+			String controllerApiHttpAddress = new URI(parsedUri.getScheme(), null, parsedUri.getHost(),
+					parsedUri.getPort() == -1 ? port : parsedUri.getPort(),
+					Utils.isBlank(parsedUri.getPath()) ? "/" : parsedUri.getPath(), parsedUri.getQuery(), null)
+							.toString();
+			logger.message("Leapwork controller API URL: " + controllerApiHttpAddress);
 			return controllerApiHttpAddress.toString();
 		} catch (Exception e) {
-			String fallback = scheme + "://" + hostname + ":" + port;
-			logger.warning(fallback);
-			return fallback;
+			throw new IllegalArgumentException("Invalid controller URL");
 		}
 	}
 
@@ -205,7 +201,7 @@ public final class PluginHandler {
 
 		LinkedHashMap<UUID, String> schedulesIdTitleHashMap = new LinkedHashMap<>();
 		ArrayList<String> tempRawScheduleList = new ArrayList<>(rawScheduleList);
-		String scheduleListUri = buildControllerApiUri(controllerApiHttpAddress, Messages.GET_ALL_AVAILABLE_SCHEDULES_PATH);
+		String scheduleListUri = buildControllerApiUri(controllerApiHttpAddress, Messages.GET_ALL_AVAILABLE_SCHEDULES_URI, STRING_EMPTY);
 		Collections.sort(rawScheduleList);
 		try {
 
@@ -331,8 +327,9 @@ public final class PluginHandler {
 			String scheduleVariablesRequestPart) throws Exception {
 
 		String uri = buildControllerApiUri(controllerApiHttpAddress,
-				String.format(Messages.RUN_SCHEDULE_PATH, scheduleId.toString()), scheduleVariablesRequestPart);
+				String.format(Messages.RUN_SCHEDULE_URI, scheduleId.toString()), scheduleVariablesRequestPart);
 		try {
+			logger.message("Leapwork request URL: " + uri);
 			Response response = client.preparePut(uri).setHeader("AccessKey", accessKey).setBody("").execute().get();
 
 			switch (response.getStatusCode()) {
@@ -423,7 +420,7 @@ public final class PluginHandler {
 		AsyncHttpClient client = new AsyncHttpClient();
 		try {
 			String uri = buildControllerApiUri(controllerApiHttpAddress,
-					String.format(Messages.STOP_RUN_PATH, runId.toString()));
+					String.format(Messages.STOP_RUN_URI, runId.toString()), STRING_EMPTY);
 
 			Response response = client.preparePut(uri).setBody("").setHeader("AccessKey", accessKey).execute().get();
 			client.close();
@@ -537,7 +534,7 @@ public final class PluginHandler {
 			throws Exception {
 
 		String uri = buildControllerApiUri(controllerApiHttpAddress,
-				String.format(Messages.GET_RUN_STATUS_PATH, runId.toString()));
+				String.format(Messages.GET_RUN_STATUS_URI, runId.toString()), STRING_EMPTY);
 
 		Response response = client.prepareGet(uri).setHeader("AccessKey", accessKey).execute().get();
 
@@ -584,7 +581,7 @@ public final class PluginHandler {
 	public List<UUID> getRunRunItems(AsyncHttpClient client, String controllerApiHttpAddress, String accessKey,
 			UUID runId) throws Exception {
 		String uri = buildControllerApiUri(controllerApiHttpAddress,
-				String.format(Messages.GET_RUN_ITEMS_IDS_PATH, runId.toString()));
+				String.format(Messages.GET_RUN_ITEMS_IDS_URI, runId.toString()), STRING_EMPTY);
 
 		Response response = client.prepareGet(uri).setHeader("AccessKey", accessKey).execute().get();
 
@@ -650,7 +647,7 @@ public final class PluginHandler {
 			final BuildProgressLogger logger) throws Exception {
 
 		String uri = buildControllerApiUri(controllerApiHttpAddress,
-				String.format(Messages.GET_RUN_ITEM_PATH, runItemId.toString()));
+				String.format(Messages.GET_RUN_ITEM_URI, runItemId.toString()), STRING_EMPTY);
 
 		Response response = client.prepareGet(uri).setHeader("AccessKey", accessKey).execute().get();
 
@@ -754,7 +751,7 @@ public final class PluginHandler {
 			throws Exception {
 
 		String uri = buildControllerApiUri(controllerApiHttpAddress,
-				String.format(Messages.GET_RUN_ITEM_KEYFRAMES_PATH, runItemId.toString()));
+				String.format(Messages.GET_RUN_ITEM_KEYFRAMES_URI, runItemId.toString()), STRING_EMPTY);
 
 		Response response = client.prepareGet(uri).setHeader("AccessKey", accessKey).execute().get();
 
@@ -908,24 +905,4 @@ public final class PluginHandler {
 		return pathPart + queryPart;
 	}
 
-	private boolean isAbsoluteUri(String input) {
-		try {
-			if (Utils.isBlank(input))
-				return false;
-
-			URI uri = new URI(input);
-			String scheme = uri.getScheme();
-			return uri.isAbsolute() && uri.getHost() != null
-					&& ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme));
-		} catch (URISyntaxException e) {
-			return false;
-		}
-	}
-
-	private String ensureRootPath(String path) {
-		if (Utils.isBlank(path))
-			return "/";
-
-		return path;
-	}
 }
