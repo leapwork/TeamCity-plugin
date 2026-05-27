@@ -9,17 +9,18 @@ function GetSch() {
           }
           else
           {
-            let myAddress = "";
-            if(document.getElementById("leapworkHTTPS").checked){myAddress = "https://" + leapworkHostname + ":" + leapworkPort;}
-            else{myAddress = "http://" + leapworkHostname + ":" + leapworkPort;}
-            const address = myAddress;
+            const address = buildControllerApiUrl(
+                leapworkHostname,
+                leapworkPort,
+                document.getElementById("leapworkHTTPS").checked,
+                "api/v4/schedules");
               const accessKey = document.getElementById("leapworkAccessKey").value;
 
               if(document.getElementById('LeapworkContainer').innerHTML == "")
               {
 
                   (jQuery).ajax({
-                      url: address + "/api/v4/schedules",
+                      url: address,
                       headers: {'AccessKey': accessKey},
                       type: 'GET',
                       dataType:"json",
@@ -167,6 +168,50 @@ function GetSch() {
 
           }
     }
+
+function buildControllerApiUrl(hostname, rawPort, enableHttps, relativePath) {
+          const url = getControllerBaseUrl(hostname, rawPort, enableHttps);
+          const normalizedBasePath = (url.pathname || "/").replace(/\/+$/, "");
+          const normalizedRelativePath = (relativePath || "").replace(/^\/+/, "");
+          url.pathname = normalizedBasePath + "/" + normalizedRelativePath;
+          return url.toString();
+}
+
+function getControllerBaseUrl(hostname, rawPort, enableHttps) {
+          const trimmedInput = normalizeUrlQuerySeparators((hostname || "").trim());
+          const scheme = enableHttps ? "https" : "http";
+          const candidate = trimmedInput.startsWith("http://") || trimmedInput.startsWith("https://")
+              ? trimmedInput
+              : (trimmedInput.includes("/") || trimmedInput.includes("?")
+                  ? `${scheme}://${trimmedInput}`
+                  : `${scheme}://${trimmedInput}:${rawPort}`);
+          const url = new URL(candidate);
+
+          if (!url.port) {
+              url.port = rawPort || (enableHttps ? "9002" : "9001");
+          }
+
+          if (!url.pathname) {
+              url.pathname = "/";
+          }
+
+          return url;
+}
+
+function normalizeUrlQuerySeparators(input) {
+          if (!input || !input.trim()) {
+              return input;
+          }
+
+          const firstQuestionMarkIndex = input.indexOf("?");
+          if (firstQuestionMarkIndex < 0) {
+              return input;
+          }
+
+          const pathPart = input.substring(0, firstQuestionMarkIndex + 1);
+          const queryPart = input.substring(firstQuestionMarkIndex + 1).replace(/\?/g, "&");
+          return pathPart + queryPart;
+}
 
 
 

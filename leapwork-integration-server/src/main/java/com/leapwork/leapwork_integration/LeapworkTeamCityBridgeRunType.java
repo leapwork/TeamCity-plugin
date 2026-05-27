@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.net.URI;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -107,15 +108,55 @@ public class LeapworkTeamCityBridgeRunType extends RunType {
 		sb.append(parameters.get(StringConstants.ParameterName_ScheduleNames));
 		sb.append("\nSchedule Ids: ");
 		sb.append(parameters.get(StringConstants.ParameterName_ScheduleIds));
-		String urlValue = "";
-		if(Utils.defaultBooleanIfNull(parameters.get(StringConstants.ParameterName_HTTPS),false))
-		urlValue =	"https://".concat(parameters.get(StringConstants.ParameterName_Hostname))
-				+ ":".concat(parameters.get(StringConstants.ParameterName_Port)) + "/api/v4/schedules";
-		else
-			urlValue =	"http://".concat(parameters.get(StringConstants.ParameterName_Hostname))
-			+ ":".concat(parameters.get(StringConstants.ParameterName_Port)) + "/api/v4/schedules";
+		String urlValue = buildControllerApiUrl(parameters);
 		cspConfiguration.addDirectiveItems("connect-src", urlValue);
 		return sb.toString();
+	}
+
+	private String buildControllerApiUrl(Map<String, String> parameters) {
+		boolean enableHttps = Utils.defaultBooleanIfNull(parameters.get(StringConstants.ParameterName_HTTPS), false);
+		String scheme = enableHttps ? "https" : "http";
+		int port = enableHttps ? 9002 : 9001;
+		try {
+			String rawPort = parameters.get(StringConstants.ParameterName_Port);
+			if (rawPort != null && rawPort.isEmpty() == false)
+				port = Integer.parseInt(rawPort);
+		} catch (Exception ignored) {
+		}
+
+		try {
+			String hostname = parameters.get(StringConstants.ParameterName_Hostname);
+			String normalizedHostname = normalizeUrlQuerySeparators(hostname == null ? "" : hostname.trim());
+			String candidate = normalizedHostname.startsWith("http://") || normalizedHostname.startsWith("https://")
+					? normalizedHostname
+					: (normalizedHostname.contains("/") || normalizedHostname.contains("?")
+							? scheme + "://" + normalizedHostname
+							: scheme + "://" + normalizedHostname + ":" + port);
+			URI parsedUri = new URI(candidate);
+			String resolvedPath = parsedUri.getPath() == null || parsedUri.getPath().trim().isEmpty() ? "/" : parsedUri.getPath();
+			int resolvedPort = parsedUri.getPort() == -1 ? port : parsedUri.getPort();
+			URI baseUri = new URI(parsedUri.getScheme(), null, parsedUri.getHost(), resolvedPort, resolvedPath,
+					parsedUri.getQuery(), null);
+			String normalizedBasePath = baseUri.getPath().replaceAll("/+$", "");
+			return new URI(baseUri.getScheme(), null, baseUri.getHost(), baseUri.getPort(),
+					normalizedBasePath + "/api/v4/schedules", baseUri.getQuery(), null).toString();
+		} catch (Exception e) {
+			return scheme + "://" + parameters.get(StringConstants.ParameterName_Hostname) + ":"
+					+ parameters.get(StringConstants.ParameterName_Port) + "/api/v4/schedules";
+		}
+	}
+
+	private String normalizeUrlQuerySeparators(String input) {
+		if (input == null || input.trim().isEmpty())
+			return input;
+
+		int firstQuestionMarkIndex = input.indexOf('?');
+		if (firstQuestionMarkIndex < 0)
+			return input;
+
+		String pathPart = input.substring(0, firstQuestionMarkIndex + 1);
+		String queryPart = input.substring(firstQuestionMarkIndex + 1).replace("?", "&");
+		return pathPart + queryPart;
 	}
 
 }
